@@ -2,7 +2,7 @@
 
 Auto Document Collector là chương trình Python tự động đọc RSS, lọc các liên kết tài liệu, kiểm tra nguồn và tải PDF/EPUB được phép vào máy tính cá nhân. Mỗi tài liệu được ghi trạng thái trong SQLite để tránh tải lại và hỗ trợ theo dõi lỗi.
 
-Phiên bản hiện tại là v1.0, xử lý **URL tải trực tiếp**. Chương trình không đăng nhập, không vượt CAPTCHA, không phá DRM và không tải tài liệu từ domain chưa được cấu hình cho phép.
+Phiên bản hiện tại là v1.0, xử lý URL tải trực tiếp và chuyển đổi công khai URL abstract của arXiv (`/abs/...`) sang endpoint PDF canonical. Chương trình không đăng nhập, không vượt CAPTCHA, không phá DRM và không tải tài liệu từ domain chưa được cấu hình cho phép.
 
 ## 1. Luồng xử lý
 
@@ -13,7 +13,7 @@ RSS_URLS
 	-> RSSReader đọc feed
 	-> DocumentFilter lọc từ khóa và đuôi .pdf/.epub
 	-> URLValidator kiểm tra HTTPS và ALLOWED_DOMAINS
-	-> DocumentResolver xác nhận URL tải trực tiếp
+	-> DocumentResolver xác nhận URL tải trực tiếp hoặc URL arXiv /abs/...
 	-> Downloader kiểm tra HTTP, MIME, dung lượng, chữ ký file
 	-> downloads/raw/pdf hoặc downloads/raw/epub
 	-> SQLite + collector.log
@@ -46,7 +46,7 @@ AutoDocumentCollector/
 |   |   |-- rss_reader.py       Doc RSS thanh FeedItem
 |   |   |-- document_filter.py  Loc tu khoa va loai tai lieu
 |   |   |-- url_validator.py    Kiem tra HTTPS/domain
-|   |   |-- document_resolver.pyChi chap nhan URL truc tiep v1
+|   |   |-- document_resolver.py  Resolve link trực tiếp và arXiv /abs/...
 |   |   `-- downloader.py       Tai file theo chunk va ghi file tam
 |   |-- database/
 |   |   |-- db.py               Khoi tao schema SQLite
@@ -83,7 +83,7 @@ Chỉ chấp nhận URL `https://`. Host phải trùng domain trong `ALLOWED_DOM
 
 ### `src/services/document_resolver.py`
 
-Ở v1, resolver không bóc tách link từ trang HTML và không theo redirect. URL phải là link tải trực tiếp có đuôi PDF/EPUB.
+Resolver nhận URL PDF/EPUB trực tiếp. Ngoài ra, URL arXiv dạng `https://arxiv.org/abs/<id>` hoặc `https://export.arxiv.org/abs/<id>` được chuyển thành `https://export.arxiv.org/pdf/<id>`. Resolver không bóc tách link từ trang HTML và không theo redirect tự do.
 
 ### `src/services/downloader.py`
 
@@ -171,7 +171,7 @@ REQUEST_TIMEOUT=30
 
 ### Lưu ý về Google Alerts
 
-Google Alerts thường trả về URL bài viết hoặc URL trung gian, không bảo đảm là link tải PDF/EPUB trực tiếp. Vì resolver v1 chỉ nhận URL có đuôi `.pdf` hoặc `.epub`, các kết quả kiểu này sẽ có trạng thái `SKIPPED`. Đây là hành vi chủ ý để không tự động phân tích trang web hoặc vượt cơ chế truy cập.
+Google Alerts thường trả về URL bài viết hoặc URL trung gian, không bảo đảm là link tải PDF/EPUB trực tiếp. Ngoại lệ hiện tại là URL arXiv `/abs/<id>` được resolver chuyển sang endpoint PDF công khai. Các trang HTML của nguồn khác vẫn có trạng thái `SKIPPED`; đây là hành vi chủ ý để không tự động phân tích trang web hoặc vượt cơ chế truy cập.
 
 Khi triển khai thật, cần dùng RSS có link tải trực tiếp hợp pháp và thêm domain của nguồn đó vào `ALLOWED_DOMAINS`. Không thêm `google.com` vào allowlist chỉ để cố tải URL trung gian.
 

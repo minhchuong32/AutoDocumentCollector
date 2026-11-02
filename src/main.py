@@ -17,6 +17,9 @@ def run(settings: Settings | None = None) -> dict[str, int]:
     settings = settings or Settings.from_env()
     settings.ensure_directories()
     logger = configure_logging(settings.log_path)
+    if not settings.rss_urls:
+        logger.warning("No RSS_URLS configured; nothing to process")
+        return {"feeds": 0, "discovered": 0, "downloaded": 0, "skipped": 0, "failed": 0}
     database = Database(settings.database_path)
     database.initialize()
     repository = DocumentRepository(database)
@@ -56,6 +59,10 @@ def run(settings: Settings | None = None) -> dict[str, int]:
                     counters["skipped"] += 1
                     continue
                 download_url, file_type = resolved
+                if not validator.is_allowed(download_url):
+                    repository.update(item.url, status="SKIPPED")
+                    counters["skipped"] += 1
+                    continue
                 repository.update(item.url, download_url=download_url, file_type=file_type, status="VALIDATED")
                 result = downloader.download(download_url, item.title, file_type)
                 repository.mark_downloaded(item.url, str(result.path))

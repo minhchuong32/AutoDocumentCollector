@@ -11,3 +11,12 @@ def test_repository_deduplicates_and_updates_status(tmp_path):
     assert not repository.is_processed("https://example.org/paper.pdf")
     repository.update("https://example.org/paper.pdf", status="DOWNLOADED")
     assert repository.is_processed("https://example.org/paper.pdf")
+
+
+def test_skipped_document_can_be_reprocessed(tmp_path):
+    database = Database(tmp_path / "collector.db")
+    database.initialize()
+    repository = DocumentRepository(database)
+    repository.add_discovered("Paper", "https://example.org/paper.pdf")
+    repository.update("https://example.org/paper.pdf", status="SKIPPED")
+    assert not repository.is_processed("https://example.org/paper.pdf")

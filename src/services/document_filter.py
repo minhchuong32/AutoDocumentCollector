@@ -13,12 +13,20 @@ def document_type(url: str) -> str | None:
     return suffix[1] if len(suffix) == 2 and suffix[1] in SUPPORTED_TYPES else None
 
 
+def is_arxiv_abstract(url: str) -> bool:
+    parsed = urlparse(url)
+    return parsed.scheme == "https" and parsed.netloc.lower() in {
+        "arxiv.org",
+        "export.arxiv.org",
+    } and parsed.path.startswith("/abs/") and len(parsed.path) > len("/abs/")
+
+
 class DocumentFilter:
     def __init__(self, keywords: tuple[str, ...] = ()):
         self.keywords = tuple(keyword.lower() for keyword in keywords)
 
     def matches(self, item: FeedItem) -> bool:
-        if not item.url or document_type(item.url) is None:
+        if not item.url or (document_type(item.url) is None and not is_arxiv_abstract(item.url)):
             return False
         if not self.keywords:
             return True

@@ -21,7 +21,7 @@ class DocumentRepository:
             row = connection.execute(
                 "SELECT status FROM documents WHERE source_url = ?", (source_url,)
             ).fetchone()
-        return row is not None and row["status"] in {"DOWNLOADED", "VALIDATED", "SKIPPED"}
+        return row is not None and row["status"] in {"DOWNLOADED", "VALIDATED"}
 
     def update(self, source_url: str, **fields) -> None:
         allowed = {"download_url", "file_type", "file_path", "status", "downloaded_at"}
